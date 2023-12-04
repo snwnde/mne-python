@@ -80,7 +80,7 @@ jobs:
           python-version: ${{ matrix.python }}
         if: startswith(matrix.kind, 'pip')
       # Python (if conda)
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: conda-incubator/setup-miniconda@v3
         with:
           activate-environment: ${{ env.CONDA_ACTIVATE_ENV }}
           python-version: ${{ env.PYTHON_VERSION }}
