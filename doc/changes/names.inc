@@ -218,6 +218,8 @@
 
 .. _Hyonyoung Shin: https://github.com/mcvain
 
+.. _Ilian Azz: https://github.com/ilianAZZ
+
 .. _Ilias Machairas: https://github.com/JungleHippo
 
 .. _Ivan Skelin: https://github.com/ivan-skelin
@@ -382,6 +384,8 @@
 
 .. _Mauricio Cespedes Tenorio: https://github.com/mcespedes99
 
+.. _Michal Žák: https://github.com/michalrzak
+
 .. _Michiru Kaneda: https://github.com/rcmdnk
 
 .. _Mikołaj Magnuski: https://github.com/mmagnuski
@@ -410,6 +414,8 @@
 
 .. _Nicolas Barascud: https://github.com/nbara
 
+.. _Nicolas Fourcaud-Trocmé: https://www.crnl.fr/fr/user/316
+
 .. _Niels Focke: https://neurologie.umg.eu/forschung/arbeitsgruppen/epilepsie-und-bildgebungsforschung
 
 .. _Niklas Wilming: https://github.com/nwilming
@@ -419,6 +425,8 @@
 .. _Nikolai Kapralov: https://github.com/ctrltz
 
 .. _Nikolas Chalas: https://github.com/Nichalas
+
+.. _Noah Markowitz: https://github.com/nmarkowitz
 
 .. _Okba Bekhelifi: https://github.com/okbalefthanded
 
@@ -597,6 +605,8 @@
 .. _Victor Ferat: https://github.com/vferat
 
 .. _Victoria Peterson: https://github.com/vpeterson
+
+.. _Xabier de Zuazo: https://github.com/zuazo
 
 .. _Xiaokai Xia: https://github.com/dddd1007
 

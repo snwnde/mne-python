@@ -10,10 +10,15 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_equal
+from numpy.testing import (
+    assert_allclose,
+    assert_array_almost_equal,
+    assert_array_equal,
+    assert_equal,
+)
 
-from mne import Epochs, io, pick_types, read_events
-from mne.decoding import CSP, Scaler, SPoC
+from mne import Epochs, compute_proj_raw, io, pick_types, read_events
+from mne.decoding import CSP, LinearModel, Scaler, SPoC, get_coef
 from mne.decoding.csp import _ajd_pham
 from mne.utils import catch_logging
 
@@ -250,7 +255,7 @@ def test_csp():
 # Even the "reg is None and rank is None" case should pass now thanks to the
 # do_compute_rank
 @pytest.mark.parametrize("ch_type", ("mag", "eeg", ("mag", "eeg")))
-@pytest.mark.parametrize("rank", (None, "correct"))
+@pytest.mark.parametrize("rank", (None, "full", "correct"))
 @pytest.mark.parametrize("reg", [None, 0.001, "oas"])
 def test_regularized_csp(ch_type, rank, reg):
     """Test Common Spatial Patterns algorithm using regularized covariance."""
@@ -263,16 +268,22 @@ def test_regularized_csp(ch_type, rank, reg):
     n_orig = len(raw.ch_names)
     ch_decim = 2
     raw.pick_channels(raw.ch_names[::ch_decim])
+    raw.info.normalize_proj()
     if "eeg" in ch_type:
         raw.set_eeg_reference(projection=True)
+        # TODO: for some reason we need to add a second EEG projector in order to get
+        # the non-semidefinite error for EEG data. Hopefully this won't make much
+        # difference in practice given our default is rank=None and regularization
+        # is easy to use.
+        raw.add_proj(compute_proj_raw(raw, n_eeg=1, n_mag=0, n_grad=0, n_jobs=1))
     n_eig = len(raw.ch_names) - len(raw.info["projs"])
     n_ch = n_orig // ch_decim
     if ch_type == "eeg":
-        assert n_eig == n_ch - 1
+        assert n_eig == n_ch - 2
     elif ch_type == "mag":
         assert n_eig == n_ch - 3
     else:
-        assert n_eig == n_ch - 4
+        assert n_eig == n_ch - 5
     if rank == "correct":
         if isinstance(ch_type, str):
             rank = {ch_type: n_eig}
@@ -280,12 +291,13 @@ def test_regularized_csp(ch_type, rank, reg):
             assert ch_type == ("mag", "eeg")
             rank = dict(
                 mag=102 // ch_decim - 3,
-                eeg=60 // ch_decim - 1,
+                eeg=60 // ch_decim - 2,
             )
     else:
-        assert rank is None, rank
-    raw.info.normalize_proj()
-    raw.filter(2, 40)
+        assert rank is None or rank == "full", rank
+    if rank == "full":
+        n_eig = n_ch
+    raw.filter(2, 40).apply_proj()
     events = read_events(event_name)
     # map make left and right events the same
     events[events[:, 2] == 2, 2] = 1
@@ -299,20 +311,28 @@ def test_regularized_csp(ch_type, rank, reg):
     n_components = 3
 
     sc = Scaler(epochs.info)
+    epochs_data_orig = epochs_data.copy()
     epochs_data = sc.fit_transform(epochs_data)
     csp = CSP(n_components=n_components, reg=reg, norm_trace=False, rank=rank)
+    if rank == "full" and reg is None:
+        with pytest.raises(np.linalg.LinAlgError, match="leading minor"):
+            csp.fit(epochs_data, epochs.events[:, -1])
+        return
     with catch_logging(verbose=True) as log:
         X = csp.fit_transform(epochs_data, epochs.events[:, -1])
     log = log.getvalue()
     assert "Setting small MAG" not in log
-    assert "Setting small data eigen" in log
+    if rank != "full":
+        assert "Setting small data eigen" in log
+    else:
+        assert "Setting small data eigen" not in log
     if rank is None:
         assert "Computing rank from data" in log
         assert " mag: rank" not in log.lower()
         assert " data: rank" in log
         assert "rank (mag)" not in log.lower()
         assert "rank (data)" in log
-    else:  # if rank is passed no computation is done
+    elif rank != "full":  # if rank is passed no computation is done
         assert "Computing rank" not in log
         assert ": rank" not in log
         assert "rank (" not in log
@@ -333,9 +353,26 @@ def test_regularized_csp(ch_type, rank, reg):
     assert sources.shape[1] == n_components
 
     cv = StratifiedKFold(5)
-    clf = make_pipeline(csp, LogisticRegression(solver="liblinear"))
-    score = cross_val_score(clf, epochs_data, y, cv=cv, scoring="roc_auc").mean()
+    clf = make_pipeline(
+        sc,
+        csp,
+        LinearModel(LogisticRegression(solver="liblinear")),
+    )
+    score = cross_val_score(clf, epochs_data_orig, y, cv=cv, scoring="roc_auc").mean()
     assert 0.75 <= score <= 1.0
+
+    # Test get_coef on CSP
+    clf.fit(epochs_data_orig, y)
+    coef = csp.patterns_[:n_components]
+    assert coef.shape == (n_components, n_channels), coef.shape
+    coef = sc.inverse_transform(coef.T[np.newaxis])[0]
+    assert coef.shape == (len(epochs.ch_names), n_components), coef.shape
+    coef_mne = get_coef(clf, "patterns_", inverse_transform=True, verbose="debug")
+    assert coef.shape == coef_mne.shape
+    coef_mne /= np.linalg.norm(coef_mne, axis=0)
+    coef /= np.linalg.norm(coef, axis=0)
+    coef *= np.sign(np.sum(coef_mne * coef, axis=0))
+    assert_allclose(coef_mne, coef)
 
 
 def test_csp_pipeline():

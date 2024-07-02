@@ -513,7 +513,7 @@ def _read_header(fname, exclude, infer_types, include=None, exclude_after_unique
     (edf_info, orig_units) : tuple
     """
     ext = os.path.splitext(fname)[1][1:].lower()
-    logger.info("%s file detected" % ext.upper())
+    logger.info(f"{ext.upper()} file detected")
     if ext in ("bdf", "edf"):
         return _read_edf_header(
             fname, exclude, infer_types, include, exclude_after_unique
@@ -706,7 +706,7 @@ def _get_info(
         info["subject_info"]["weight"] = float(edf_info["subject_info"]["weight"])
 
     # Filter settings
-    if filt_ch_idxs := [x for x in sel if x not in stim_channel_idxs]:
+    if filt_ch_idxs := [x for x in range(len(sel)) if x not in stim_channel_idxs]:
         _set_prefilter(info, edf_info, filt_ch_idxs, "highpass")
         _set_prefilter(info, edf_info, filt_ch_idxs, "lowpass")
 
@@ -951,6 +951,7 @@ def _read_edf_header(
         edf_info["units"] = np.array(edf_info["units"], float)
 
         ch_names = [ch_names[idx] for idx in sel]
+        ch_types = [ch_types[idx] for idx in sel]
         units = [units[idx] for idx in sel]
 
         if not exclude_after_unique:
@@ -1547,7 +1548,7 @@ def _find_exclude_idx(ch_names, exclude, include=None):
     if include:  # find other than include channels
         if exclude:
             raise ValueError(
-                "'exclude' must be empty if 'include' is assigned. " f"Got {exclude}."
+                f"'exclude' must be empty if 'include' is assigned. Got {exclude}."
             )
         if isinstance(include, str):  # regex for channel names
             indices_include = []

@@ -7,7 +7,6 @@ __all__ = [
     "ExtendedTimeMixin",
     "GetEpochsMixin",
     "ProgressBar",
-    "SilenceStdout",
     "SizeMixin",
     "TimeMixin",
     "_DefaultEventParser",
@@ -101,7 +100,6 @@ __all__ = [
     "_reg_pinv",
     "_reject_data_segments",
     "_repeated_svd",
-    "_replace_md5",
     "_require_version",
     "_resource_path",
     "_safe_input",
@@ -133,7 +131,6 @@ __all__ = [
     "check_random_state",
     "check_version",
     "compute_corr",
-    "copy_base_doc_to_subclass_doc",
     "copy_doc",
     "copy_function_doc_to_method_doc",
     "create_slices",
@@ -159,6 +156,8 @@ __all__ = [
     "open_docs",
     "path_like",
     "pformat",
+    "pinv",
+    "pinvh",
     "random_permutation",
     "repr_html",
     "requires_freesurfer",
@@ -203,7 +202,6 @@ from ._logging import (
 )
 from ._testing import (
     ArgvSetter,
-    SilenceStdout,
     _click_ch_name,
     _raw_annot,
     _TempDir,
@@ -299,7 +297,6 @@ from .dataframe import (
 )
 from .docs import (
     _doc_special_members,
-    copy_base_doc_to_subclass_doc,
     copy_doc,
     copy_function_doc_to_method_doc,
     deprecated,
@@ -316,6 +313,8 @@ from .linalg import (
     _svd_lwork,
     _sym_mat_pow,
     eigh,
+    pinv,
+    pinvh,
     sqrtm_sym,
 )
 from .misc import (
@@ -366,7 +365,6 @@ from .numerics import (
     _mask_to_onsets_offsets,
     _reg_pinv,
     _reject_data_segments,
-    _replace_md5,
     _ReuseCycle,
     _scaled_array,
     _stamp_to_dt,

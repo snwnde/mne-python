@@ -51,8 +51,6 @@ edf_path = data_dir / "test.edf"
 duplicate_channel_labels_path = data_dir / "duplicate_channel_labels.edf"
 edf_uneven_path = data_dir / "test_uneven_samp.edf"
 bdf_eeglab_path = data_dir / "test_bdf_eeglab.mat"
-edf_eeglab_path = data_dir / "test_edf_eeglab.mat"
-edf_uneven_eeglab_path = data_dir / "test_uneven_samp.mat"
 edf_stim_channel_path = data_dir / "test_edf_stim_channel.edf"
 edf_txt_stim_channel_path = data_dir / "test_edf_stim_channel.txt"
 
@@ -100,7 +98,7 @@ def test_orig_units():
 def test_units_params():
     """Test enforcing original channel units."""
     with pytest.raises(
-        ValueError, match=r"Unit for channel .* is present .* cannot " "overwrite it"
+        ValueError, match=r"Unit for channel .* is present .* cannot overwrite it"
     ):
         _ = read_raw_edf(edf_path, units="V", preload=True)
 
@@ -175,26 +173,24 @@ def test_bdf_data():
     # XXX BDF data for these is around 0.01 when it should be in the uV range,
     # probably some bug
     test_scaling = False
-    with pytest.warns(RuntimeWarning, match="Channels contain different"):
-        raw_py = _test_raw_reader(
-            read_raw_bdf,
-            input_fname=bdf_path,
-            eog=eog,
-            misc=misc,
-            exclude=["M2", "IEOG"],
-            test_scaling=test_scaling,
-        )
+    raw_py = _test_raw_reader(
+        read_raw_bdf,
+        input_fname=bdf_path,
+        eog=eog,
+        misc=misc,
+        exclude=["M2", "IEOG"],
+        test_scaling=test_scaling,
+    )
     assert len(raw_py.ch_names) == 71
-    with pytest.warns(RuntimeWarning, match="Channels contain different"):
-        raw_py = _test_raw_reader(
-            read_raw_bdf,
-            input_fname=bdf_path,
-            montage="biosemi64",
-            eog=eog,
-            misc=misc,
-            exclude=["M2", "IEOG"],
-            test_scaling=test_scaling,
-        )
+    raw_py = _test_raw_reader(
+        read_raw_bdf,
+        input_fname=bdf_path,
+        montage="biosemi64",
+        eog=eog,
+        misc=misc,
+        exclude=["M2", "IEOG"],
+        test_scaling=test_scaling,
+    )
     assert len(raw_py.ch_names) == 71
     assert "RawEDF" in repr(raw_py)
     picks = pick_types(raw_py.info, meg=False, eeg=True, exclude="bads")
@@ -1015,9 +1011,8 @@ def test_include():
     raw = read_raw_edf(edf_path, include="I[1-4]")
     assert sorted(raw.ch_names) == ["I1", "I2", "I3", "I4"]
 
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(ValueError, match="'exclude' must be empty if 'include' is "):
         raw = read_raw_edf(edf_path, include=["I1", "I2"], exclude="I[1-4]")
-        assert str(e.value) == "'exclude' must be empty" "if 'include' is assigned."
 
 
 @pytest.mark.parametrize(

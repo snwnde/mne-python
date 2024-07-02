@@ -733,19 +733,6 @@ def test_epochstfr_init_errors(epochs_tfr):
         EpochsTFR(inst=state | dict(freqs=epochs_tfr.freqs[:-1]))
 
 
-@pytest.mark.parametrize("inst", ("epochs_tfr", "average_tfr"))
-def test_tfr_init_deprecation(inst, average_tfr, request):
-    """Check for the deprecation warning message (not needed for RawTFR, it's new)."""
-    tfr = _get_inst(inst, request, average_tfr=average_tfr)
-    kwargs = dict(info=tfr.info, data=tfr.data, times=tfr.times, freqs=tfr.freqs)
-    Klass = tfr.__class__
-    with pytest.warns(FutureWarning, match='"info", "data", "times" are deprecat'):
-        Klass(**kwargs)
-    with pytest.raises(ValueError, match="Do not pass `inst` alongside deprecated"):
-        with pytest.warns(FutureWarning, match='"info", "data", "times" are deprecat'):
-            Klass(**kwargs, inst="foo")
-
-
 @pytest.mark.parametrize(
     "method,freqs,match",
     (
@@ -955,6 +942,23 @@ def test_add_channels():
     pytest.raises(ValueError, tfr_meg.add_channels, [tfr_eeg])
     pytest.raises(ValueError, tfr_meg.add_channels, [tfr_meg])
     pytest.raises(TypeError, tfr_meg.add_channels, tfr_badsf)
+
+    # Test for EpochsTFR(Array)
+    tfr1 = EpochsTFRArray(
+        info=mne.create_info(["EEG 001"], 1000, "eeg"),
+        data=np.zeros((5, 1, 2, 3)),  # epochs, channels, freqs, times
+        times=[0.1, 0.2, 0.3],
+        freqs=[0.1, 0.2],
+    )
+    tfr2 = EpochsTFRArray(
+        info=mne.create_info(["EEG 002", "EEG 003"], 1000, "eeg"),
+        data=np.zeros((5, 2, 2, 3)),  # epochs, channels, freqs, times
+        times=[0.1, 0.2, 0.3],
+        freqs=[0.1, 0.2],
+    )
+    tfr1.add_channels([tfr2])
+    assert tfr1.ch_names == ["EEG 001", "EEG 002", "EEG 003"]
+    assert tfr1.data.shape == (5, 3, 2, 3)
 
 
 def test_compute_tfr():

@@ -271,11 +271,12 @@ Operates in place.
 # raw/epochs/evoked apply_function method
 # apply_function method summary
 applyfun_summary = """\
-The function ``fun`` is applied to the channels or vertices defined in ``picks``.
-The {} object's data is modified in-place. If the function returns a different
+The function ``fun`` is applied to the {applies_to} defined in ``picks``.
+The {data_type} object's data is modified in-place. If the function returns a different
 data type (e.g. :py:obj:`numpy.complex128`) it must be specified
 using the ``dtype`` parameter, which causes the data type of **all** the data
-to change (even if the function is only applied to channels/vertices in ``picks``).{}
+to change (even if the function is only applied to {applies_to} in
+``picks``).{preload}
 
 .. note:: If ``n_jobs`` > 1, more memory is required as
           ``len(picks) * n_times`` additional time points need to
@@ -288,10 +289,18 @@ applyfun_preload = (
     " The object has to have the data loaded e.g. with "
     "``preload=True`` or ``self.load_data()``."
 )
-docdict["applyfun_summary_epochs"] = applyfun_summary.format("epochs", applyfun_preload)
-docdict["applyfun_summary_evoked"] = applyfun_summary.format("evoked", "")
-docdict["applyfun_summary_raw"] = applyfun_summary.format("raw", applyfun_preload)
-docdict["applyfun_summary_stc"] = applyfun_summary.format("source estimate", "")
+docdict["applyfun_summary_epochs"] = applyfun_summary.format(
+    applies_to="channels", data_type="epochs", preload=applyfun_preload
+)
+docdict["applyfun_summary_evoked"] = applyfun_summary.format(
+    applies_to="channels", data_type="evoked", preload=""
+)
+docdict["applyfun_summary_raw"] = applyfun_summary.format(
+    applies_to="channels", data_type="raw", preload=applyfun_preload
+)
+docdict["applyfun_summary_stc"] = applyfun_summary.format(
+    applies_to="vertices", data_type="source estimate", preload=""
+)
 
 docdict["area_alpha_plot_psd"] = """\
 area_alpha : float
@@ -308,9 +317,13 @@ area_mode : str | None
 
 docdict["aseg"] = """
 aseg : str
-    The anatomical segmentation file. Default ``aparc+aseg``. This may
-    be any anatomical segmentation file in the mri subdirectory of the
-    Freesurfer subject directory.
+    The anatomical segmentation file. Default ``auto`` uses ``aparc+aseg``
+    if available and ``wmparc`` if not. This may be any anatomical
+    segmentation file in the mri subdirectory of the Freesurfer subject
+    directory.
+
+    .. versionchanged:: 1.8
+       Added support for the new default ``'auto'``.
 """
 
 docdict["average_plot_evoked_topomap"] = """
@@ -1054,6 +1067,7 @@ decim : int
                  ``decim``), i.e., it compresses the signal (see Notes).
                  If the data are not properly filtered, aliasing artifacts
                  may occur.
+                 See :ref:`resampling-and-decimating` for more information.
 """
 
 docdict["decim_notes"] = """
@@ -1285,11 +1299,20 @@ tmin, tmax : float
     time are included. Defaults to ``-0.2`` and ``0.5``, respectively.
 """
 
+docdict["equalize_events_method"] = """
+method : ``'truncate'`` | ``'mintime'`` | ``'random'``
+    If ``'truncate'``, events will be truncated from the end of each event
+    list. If ``'mintime'``, timing differences between each event list will be
+    minimized. If ``'random'``, events will be randomly selected from each event
+    list.
+
+    .. versionadded:: 1.8
+"""
+
 docdict["estimate_plot_psd"] = """\
-estimate : str, {'auto', 'power', 'amplitude'}
-    Can be "power" for power spectral density (PSD), "amplitude" for
-    amplitude spectrum density (ASD), or "auto" (default), which uses
-    "power" when dB is True and "amplitude" otherwise.
+estimate : str, {'power', 'amplitude'}
+    Can be "power" for power spectral density (PSD; default), "amplitude" for
+    amplitude spectrum density (ASD).
 """
 
 docdict["event_color"] = """
@@ -1701,7 +1724,8 @@ flat : dict | str | None
 
 _fmin_fmax = """\
 fmin, fmax : float
-    The lower- and upper-bound on frequencies of interest. Default is {}"""
+    The lower- and upper-bound on frequencies of interest. Default is
+    {}"""
 
 docdict["fmin_fmax_psd"] = _fmin_fmax.format(
     "``fmin=0, fmax=np.inf`` (spans all frequencies present in the data)."
@@ -2575,10 +2599,13 @@ docdict["method_kw_psd"] = """\
 **method_kw
     Additional keyword arguments passed to the spectral estimation
     function (e.g., ``n_fft, n_overlap, n_per_seg, average, window``
-    for Welch method, or
-    ``bandwidth, adaptive, low_bias, normalization`` for multitaper
-    method). See :func:`~mne.time_frequency.psd_array_welch` and
-    :func:`~mne.time_frequency.psd_array_multitaper` for details.
+    for Welch method, or ``bandwidth, adaptive, low_bias, normalization``
+    for multitaper method). See :func:`~mne.time_frequency.psd_array_welch`
+    and :func:`~mne.time_frequency.psd_array_multitaper` for details. Note
+    that for Welch method if ``n_fft`` is unspecified its default will be
+    the smaller of ``2048`` or the number of available time samples (taking into
+    account ``tmin`` and ``tmax``), not ``256`` as in
+    :func:`~mne.time_frequency.psd_array_welch`.
 """
 
 docdict["method_kw_tfr"] = _method_kw_tfr_template.format(
@@ -3346,13 +3373,13 @@ selection : list of str
 _picks_types = "str | array-like | slice | None"
 _picks_header = f"picks : {_picks_types}"
 _picks_desc = "Channels to include."
-_picks_int = "Slices and lists of integers will be interpreted as channel " "indices."
+_picks_int = "Slices and lists of integers will be interpreted as channel indices."
 _picks_str_types = """channel *type* strings (e.g., ``['meg', 'eeg']``) will
     pick channels of those types,"""
 _picks_str_names = """channel *name* strings (e.g., ``['MEG0111', 'MEG2623']``
     will pick the given channels."""
-_picks_str_values = """Can also be the string values "all" to pick
-    all channels, or "data" to pick :term:`data channels`."""
+_picks_str_values = """Can also be the string values ``'all'`` to pick
+    all channels, or ``'data'`` to pick :term:`data channels`."""
 _picks_str = f"""In lists, {_picks_str_types} {_picks_str_names}
     {_picks_str_values}
     None (default) will pick"""
@@ -3393,8 +3420,13 @@ picks : int | list of int | slice | None
     If an integer, represents the index of the IC to pick.
     Multiple ICs can be selected using a list of int or a slice.
     The indices are 0-indexed, so ``picks=1`` will pick the second
-    IC: ``ICA001``. ``None`` will pick all independent components in the order
-    fitted.
+    IC: ``ICA001``. ``None`` will pick all independent components in the order fitted.
+"""
+docdict["picks_layout"] = """
+picks : array-like of str or int | slice | ``'all'`` | None
+    Channels to include in the layout. Slices and lists of integers will be interpreted
+    as channel indices. Can also be the string value ``'all'`` to pick all channels.
+    None (default) will pick all channels.
 """
 docdict["picks_nostr"] = f"""picks : list | slice | None
     {_picks_desc} {_picks_int}
@@ -3483,7 +3515,7 @@ precompute : bool | str
 
     .. versionadded:: 0.24
     .. versionchanged:: 1.0
-       Support for the MNE_BROWSER_PRECOMPUTE config variable.
+       Support for the ``MNE_BROWSER_PRECOMPUTE`` config variable.
 """
 
 docdict["preload"] = """
@@ -3521,9 +3553,9 @@ proj : bool | 'delayed'
 
 docdict["proj_plot"] = """
 proj : bool | 'interactive' | 'reconstruct'
-    If true SSP projections are applied before display. If 'interactive',
+    If true SSP projections are applied before display. If ``'interactive'``,
     a check box for reversible selection of SSP projection vectors will
-    be shown. If 'reconstruct', projection vectors will be applied and then
+    be shown. If ``'reconstruct'``, projection vectors will be applied and then
     M/EEG data will be reconstructed via field mapping to reduce the signal
     bias caused by projection.
 
@@ -3816,9 +3848,8 @@ res : int
 docdict["return_pca_vars_pctf"] = """
 return_pca_vars : bool
     Whether or not to return the explained variances across the specified
-    vertices for individual SVD components. This is only valid if
-    mode='svd'.
-    Default return_pca_vars=False.
+    vertices for individual SVD components. This is only valid if ``mode='svd'``.
+    Default to False.
 """
 
 docdict["roll"] = """
@@ -5002,7 +5033,7 @@ def fill_doc(f):
     except (TypeError, ValueError, KeyError) as exp:
         funcname = f.__name__
         funcname = docstring.split("\n")[0] if funcname is None else funcname
-        raise RuntimeError(f"Error documenting {funcname}:\n{str(exp)}")
+        raise RuntimeError(f"Error documenting {funcname}:\n{exp}")
     return f
 
 
@@ -5196,43 +5227,6 @@ def copy_function_doc_to_method_doc(source):
     return wrapper
 
 
-def copy_base_doc_to_subclass_doc(subclass):
-    """Use the docstring from a parent class methods in derived class.
-
-    The docstring of a parent class method is prepended to the
-    docstring of the method of the class wrapped by this decorator.
-
-    Parameters
-    ----------
-    subclass : wrapped class
-        Class to copy the docstring to.
-
-    Returns
-    -------
-    subclass : Derived class
-        The decorated class with copied docstrings.
-    """
-    ancestors = subclass.mro()[1:-1]
-
-    for source in ancestors:
-        methodList = [
-            method for method in dir(source) if callable(getattr(source, method))
-        ]
-        for method_name in methodList:
-            # discard private methods
-            if method_name[0] == "_":
-                continue
-            base_method = getattr(source, method_name)
-            sub_method = getattr(subclass, method_name)
-            if base_method is not None and sub_method is not None:
-                doc = base_method.__doc__
-                if sub_method.__doc__ is not None:
-                    doc += "\n" + sub_method.__doc__
-                sub_method.__doc__ = doc
-
-    return subclass
-
-
 def linkcode_resolve(domain, info):
     """Determine the URL corresponding to a Python object.
 
@@ -5303,7 +5297,7 @@ def linkcode_resolve(domain, info):
     if "dev" in mne.__version__:
         kind = "main"
     else:
-        kind = "maint/%s" % (".".join(mne.__version__.split(".")[:2]))
+        kind = "maint/" + ".".join(mne.__version__.split(".")[:2])
     return f"http://github.com/mne-tools/mne-python/blob/{kind}/mne/{fn}{linespec}"
 
 
@@ -5530,7 +5524,7 @@ def _docformat(docstring, docdict=None, funcname=None):
     try:
         return docstring % indented
     except (TypeError, ValueError, KeyError) as exp:
-        raise RuntimeError(f"Error documenting {funcname}:\n{str(exp)}")
+        raise RuntimeError(f"Error documenting {funcname}:\n{exp}")
 
 
 def _indentcount_lines(lines):

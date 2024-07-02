@@ -35,7 +35,6 @@ from mne.report import report as report_mod
 from mne.report.report import (
     _ALLOWED_IMAGE_FORMATS,
     CONTENT_ORDER,
-    _webp_supported,
 )
 from mne.utils import Bunch, _record_warnings
 from mne.utils._testing import assert_object_equal
@@ -286,7 +285,7 @@ def test_add_custom_js(tmp_path):
 
     report = Report()
     report.add_figure(fig=fig, title="Test section")
-    custom_js = "function hello() {\n" '  alert("Hello, report!");\n' "}"
+    custom_js = 'function hello() {\n  alert("Hello, report!");\n}'
     report.add_custom_js(js=custom_js)
 
     assert custom_js in report.include
@@ -354,7 +353,7 @@ def test_report_raw_psd_and_date(tmp_path):
     assert isinstance(report.html, list)
     assert "PSD" in "".join(report.html)
     assert "Unknown" not in "".join(report.html)
-    assert "GMT" in "".join(report.html)
+    assert "UTC" in "".join(report.html)
 
     # test kwargs passed through to underlying array func
     Report(raw_psd=dict(window="boxcar"))
@@ -822,7 +821,7 @@ def test_scraper(tmp_path):
     assert not out_html.is_file()
     scraper.copyfiles()
     assert out_html.is_file()
-    assert rst.count('"') == 6
+    assert rst.count('"') == 8
     assert "<iframe" in rst
     assert img_fname.with_suffix(".svg").is_file()
 
@@ -926,6 +925,13 @@ def test_manual_report_2d(tmp_path, invisible_fig):
     ica_ecg_scores = ica_eog_scores = np.array([3, 0, 0])
     ica_ecg_evoked = ica_eog_evoked = epochs_without_metadata.average()
 
+    # Normally, ICA.find_bads_*() assembles the labels_ dict; since we didn't run any
+    # of these methods, fill in some fake values manually.
+    ica.labels_ = {
+        "ecg/0/fake ECG channel": [0],
+        "eog/0/fake EOG channel": [1],
+    }
+
     r.add_raw(raw=raw, title="my raw data", tags=("raw",), psd=True, projs=False)
     r.add_raw(raw=raw, title="my raw data 2", psd=False, projs=False, butterfly=1)
     r.add_events(events=events_fname, title="my events", sfreq=raw.info["sfreq"])
@@ -945,7 +951,8 @@ def test_manual_report_2d(tmp_path, invisible_fig):
     r.add_epochs(
         epochs=epochs_without_metadata, title="my epochs 2", psd=True, projs=False
     )
-    assert "Metadata" not in r.html[-1]
+    assert "Metadata" in r.html[-1]
+    assert "No metadata set" in r.html[-1]
 
     # Try with metadata
     r.add_epochs(
@@ -955,6 +962,7 @@ def test_manual_report_2d(tmp_path, invisible_fig):
         projs=False,
     )
     assert "Metadata" in r.html[-1]
+    assert "25 rows × 7 columns" in r.html[-1]
 
     with pytest.raises(ValueError, match="requested to calculate PSD on a duration"):
         r.add_epochs(
@@ -1195,11 +1203,6 @@ def test_tags(tags, str_or_array, wrong_dtype, invalid_chars):
 @pytest.mark.parametrize("image_format", _ALLOWED_IMAGE_FORMATS)
 def test_image_format(image_format):
     """Test image format support."""
-    if image_format == "webp":
-        if not _webp_supported():
-            with pytest.raises(ValueError, match="matplotlib"):
-                Report(image_format="webp")
-            return
     r = Report(image_format=image_format)
     fig1, _ = _get_example_figures()
     r.add_figure(fig1, "fig1")
