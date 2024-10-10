@@ -72,10 +72,10 @@ jobs:
             python: '3.10'
             kind: mamba
           - os: ubuntu-latest
-            python: '3.9'
+            python: '3.10'
             kind: minimal
           - os: ubuntu-20.04
-            python: '3.9'
+            python: '3.10'
             kind: old
     steps:
       - uses: actions/checkout@v4
@@ -99,7 +99,7 @@ jobs:
           sed -i '/dipy/d' environment.yml
           sed -i 's/- mne$/- mne-base/' environment.yml
         if: matrix.os == 'ubuntu-latest' && startswith(matrix.kind, 'conda') && matrix.python == '3.12'
-      - uses: mamba-org/setup-micromamba@v1
+      - uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: ${{ env.CONDA_ENV }}
           environment-name: mne
@@ -131,4 +131,4 @@ jobs:
       - uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-        if: success()
+        if: always()
