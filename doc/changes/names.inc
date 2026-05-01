@@ -36,6 +36,7 @@
 .. _Asish Panda: https://github.com/kaichogami
 .. _Austin Hurst: https://github.com/a-hurst
 .. _Ayushi Satodiya: https://github.com/ayuclan
+.. _Baris Talar: https://github.com/baris-talar
 .. _Beige Jin: https://github.com/BeiGeJin
 .. _Ben Beasley: https://github.com/musicinmybrain
 .. _Benedikt Ehinger: https://www.benediktehinger.de
